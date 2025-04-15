@@ -1,0 +1,24 @@
+# Python derleme dosyaları
+__pycache__/
+*.py[cod]
+*.so
+
+# Çevre dosyaları
+.env
+
+# IDE/editor dosyaları
+.vscode/
+.idea/
+
+# Veritabanı dosyaları (SQLite gibi)
+*.sqlite3
+*.db
+
+# Log dosyaları
+*.log
+
+# MacOS
+.DS_Store
+
+# Windows
+Thumbs.db
