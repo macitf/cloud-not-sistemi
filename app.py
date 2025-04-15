@@ -1,4 +1,6 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask_caching import Cache
+from datetime import datetime
 import psycopg2
 import os
 from dotenv import load_dotenv
@@ -13,9 +15,18 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 conn = psycopg2.connect(DATABASE_URL)
 cursor = conn.cursor()
 
+# Redis bağlantısı
+cache_config = {
+    "CACHE_TYPE": "RedisCache",
+    "CACHE_REDIS_URL": os.getenv("REDIS_URL")
+}
+cache = Cache(config=cache_config)
+cache.init_app(app)
+
 # Log fonksiyonu (stdout)
 def log(msg):
     print(f"📘 {msg}")
+
 
 # Tabloları oluştur
 def init_db():
@@ -38,11 +49,15 @@ def init_db():
     """)
     conn.commit()
     log("Veritabanı tabloları oluşturuldu")
+    
+    
 
 # 🔐 Giriş Sayfası
 @app.route('/')
 def index():
     return render_template("login.html")
+
+
 
 # 🔐 Giriş Kontrolü
 @app.route('/login', methods=['POST'])
@@ -94,9 +109,11 @@ def add_grade_web():
     teacher_id = request.form.get("teacher_id")
 
     try:
+        # Öğretmenin verdiği dersi ve adını çek
         cursor.execute("SELECT course, username FROM users WHERE id=%s", (teacher_id,))
         course, name = cursor.fetchone()
 
+        # Notu ekle veya güncelle
         cursor.execute("""
             INSERT INTO grades (student_id, course, grade)
             VALUES (%s, %s, %s)
@@ -105,17 +122,23 @@ def add_grade_web():
         """, (student_id, course, grade))
         conn.commit()
 
+        # ✅ Öğrenciye ait not cache'i sil
+        cache.delete(f"grades_{student_id}")
+
     except Exception as e:
         conn.rollback()
         print("❌ Not eklenirken hata:", e)
         return "<h3>❌ Not eklenemedi. Hata loga yazıldı. <a href='/'>Geri dön</a></h3>"
 
+    # Notları tekrar çek
     cursor.execute("SELECT student_id, course, grade FROM grades WHERE course=%s", (course,))
     grades = cursor.fetchall()
 
+    # Öğrenci listesini çek
     cursor.execute("SELECT id, username FROM users WHERE role='student'")
     students = cursor.fetchall()
 
+    # Ortalama hesapla
     cursor.execute("SELECT ROUND(AVG(grade), 1) FROM grades WHERE course = %s", (course,))
     course_avg = cursor.fetchone()[0] or 0
 
@@ -138,6 +161,7 @@ def delete_grade(student_id):
 
 # 👨‍🎓 Öğrenci Paneli
 @app.route('/students/<int:student_id>/grades')
+@cache.cached(timeout=300, key_prefix=lambda: f"grades_{request.view_args['student_id']}")
 def view_grades_web(student_id):
     # Öğrencinin notlarını al
     cursor.execute("SELECT course, grade FROM grades WHERE student_id=%s", (student_id,))
@@ -156,7 +180,7 @@ def view_grades_web(student_id):
     """)
     averages = cursor.fetchall()
 
-    # Ortalamaları sözlük haline getir (örnek: {'Matematik': 75.0, 'Türkçe': 85.5})
+    # Ortalamaları sözlük haline getir
     avg_dict = {course: avg for course, avg in averages}
 
     return render_template("student.html",
@@ -164,6 +188,7 @@ def view_grades_web(student_id):
                            student_id=student_id,
                            student_name=student_name,
                            averages=avg_dict)
+
 
 
 
@@ -178,3 +203,6 @@ def get_grades_api(student_id):
 if __name__ == '__main__':
     init_db()
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+    
+if __name__ == "__main__":
+    app.run(debug=True)
