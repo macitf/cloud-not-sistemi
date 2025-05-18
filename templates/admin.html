@@ -1,0 +1,55 @@
+<!-- templates/admin.html -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Paneli</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container mt-4">
+  <div class="d-flex justify-content-between mb-4">
+    <h3>🔐 Admin Paneli</h3>
+    <a href="/" class="btn btn-outline-danger">Çıkış Yap</a>
+  </div>
+
+  <h5>👥 Kullanıcılar</h5>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Kullanıcı Adı</th>
+        <th>Rol</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u[0] }}</td>
+        <td>{{ u[1] }}</td>
+        <td>{{ u[2] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h5 class="mt-5">📊 Tüm Notlar</h5>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Öğrenci ID</th>
+        <th>Ders</th>
+        <th>Not</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in grades %}
+      <tr>
+        <td>{{ g[0] }}</td>
+        <td>{{ g[1] }}</td>
+        <td>{{ g[2] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

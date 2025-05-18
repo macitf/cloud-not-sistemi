@@ -60,6 +60,7 @@ def index():
 
 
 # 🔐 Giriş Kontrolü
+# 🔐 Giriş Kontrolü
 @app.route('/login', methods=['POST'])
 def login_web():
     username = request.form.get("username")
@@ -71,7 +72,10 @@ def login_web():
     if user:
         user_id, role, course = user
 
-        if role == "teacher":
+        if role == "admin":
+            return redirect(url_for('admin_panel'))
+
+        elif role == "teacher":
             cursor.execute("SELECT username FROM users WHERE id=%s", (user_id,))
             name = cursor.fetchone()[0]
 
@@ -93,10 +97,11 @@ def login_web():
                                    students=students,
                                    course_average=course_avg)
 
-        else:
+        else:  # student
             return redirect(url_for('view_grades_web', student_id=user_id))
 
     return "<h3>❌ Hatalı giriş bilgisi. <a href='/'>Geri dön</a></h3>"
+
 
 
 
@@ -190,6 +195,18 @@ def view_grades_web(student_id):
                            averages=avg_dict)
 
 
+@app.route("/admin")
+def admin_panel():
+    # Tüm kullanıcıları çek
+    cursor.execute("SELECT id, username, role FROM users ORDER BY id")
+    users = cursor.fetchall()
+
+    # Tüm notları çek
+    cursor.execute("SELECT student_id, course, grade FROM grades ORDER BY student_id")
+    grades = cursor.fetchall()
+
+    return render_template("admin.html", users=users, grades=grades)
+
 
 
 
@@ -206,3 +223,7 @@ if __name__ == '__main__':
     
 if __name__ == "__main__":
     app.run(debug=True)
+
+  
+
+
